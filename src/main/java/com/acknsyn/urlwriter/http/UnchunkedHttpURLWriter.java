@@ -62,6 +62,7 @@ public class UnchunkedHttpURLWriter extends Writer {
         try {
             writer = new BufferedWriter(new OutputStreamWriter(connection.getOutputStream(), HTTP_CHARSET));
             writer.write(request.toString());
+            writer.flush();
 
             log.debug("made http request {}", request);
 
@@ -71,15 +72,19 @@ public class UnchunkedHttpURLWriter extends Writer {
                 log.error("http flush failed");
                 logError();
             }
+
         } catch (Exception e) {
+            log.error("couldn't flush http writer", e);
+        } finally {
+            flushed = true;
+
             if (writer != null) {
                 try {
                     writer.close();
-                } catch (IOException ioe) {
-                    log.error("couldn't close http writer", ioe);
+                } catch (Exception e) {
+                    log.error("couldn't close http writer", e);
                 }
             }
-
         }
         request.setLength(0);
         connection.disconnect();
@@ -87,7 +92,11 @@ public class UnchunkedHttpURLWriter extends Writer {
 
     @Override
     public void close() throws IOException {
-        if (!flushed) flush();
+        try {
+            if (!flushed) flush();
+        } finally {
+            closed = true;
+        }
     }
 
     private void logError() throws IOException {
