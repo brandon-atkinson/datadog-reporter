@@ -7,7 +7,7 @@
     <packaging>jar</packaging>
     <name>datadog-reporter</name>
     <description>A third party dependency-free datadog reporter for Coda Hale's 'metrics' library.</description>
-    <url>http://brandon.acknsyn.com/datadog-reporter</url>
+    <url>http://brandon.acknsyn.com/datadog-reporter.html</url>
 
     <developers>
         <developer>
