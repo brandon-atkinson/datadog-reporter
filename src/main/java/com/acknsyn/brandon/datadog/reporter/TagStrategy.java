@@ -1,4 +1,4 @@
-package com.acknsyn.metrics.datadog;
+package com.acknsyn.brandon.datadog.reporter;
 
 import com.codahale.metrics.Metric;
 

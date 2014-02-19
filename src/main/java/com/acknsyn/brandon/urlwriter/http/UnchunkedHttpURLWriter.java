@@ -1,4 +1,4 @@
-package com.acknsyn.urlwriter.http;
+package com.acknsyn.brandon.urlwriter.http;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

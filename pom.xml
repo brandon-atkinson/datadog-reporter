@@ -1,12 +1,13 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    <groupId>com.acknsyn.metrics</groupId>
-    <artifactId>metrics-datadog</artifactId>
-    <version>0.9-SNAPSHOT</version>
+    <groupId>com.acknsyn.brandon</groupId>
+    <artifactId>datadog-reporter</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
     <packaging>jar</packaging>
-    <name>Coda Hale Metrics to Datadog reporter</name>
-    <url>http://metrics-datadog.acknsyn.com/</url>
+    <name>datadog-reporter</name>
+    <description>A third party dependency-free datadog reporter for Coda Hale's 'metrics' library.</description>
+    <url>http://brandon.acknsyn.com/datadog-reporter</url>
 
     <developers>
         <developer>
@@ -14,7 +15,7 @@
             <name>Brandon Atkinson</name>
             <email>brandon.n.atkinson@gmail.com</email>
             <organization>acknsyn</organization>
-            <url>http://acknsyn.com</url>
+            <url>http://brandon.acknsyn.com</url>
             <roles>
                 <role>developer</role>
             </roles>
@@ -32,9 +33,9 @@
     </licenses>
 
     <scm>
-        <url>https://github.com/brandon-atkinson/metrics-datadog</url>
-        <connection>scm:git:git://github.com/brandon-atkinson/metrics-datadog.git</connection>
-        <developerConnection>scm:git:git@github.com:brandon-atkinson/metrics-datadog.git</developerConnection>
+        <url>https://github.com/brandon-atkinson/datadog-reporter</url>
+        <connection>scm:git:git://github.com/brandon-atkinson/datadog-reporter.git</connection>
+        <developerConnection>scm:git:git@github.com:brandon-atkinson/datadog-reporter.git</developerConnection>
     </scm>
 
     <dependencies>

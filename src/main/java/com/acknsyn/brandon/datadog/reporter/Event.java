@@ -1,4 +1,4 @@
-package com.acknsyn.metrics.datadog;
+package com.acknsyn.brandon.datadog.reporter;
 
 public class Event {
 

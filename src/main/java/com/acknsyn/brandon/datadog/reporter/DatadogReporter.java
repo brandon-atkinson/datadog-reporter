@@ -1,7 +1,7 @@
-package com.acknsyn.metrics.datadog;
+package com.acknsyn.brandon.datadog.reporter;
 
-import com.acknsyn.urlwriter.URLWriterFactory;
-import com.acknsyn.urlwriter.http.UnchunkedHttpURLWriterFactory;
+import com.acknsyn.brandon.urlwriter.URLWriterFactory;
+import com.acknsyn.brandon.urlwriter.http.UnchunkedHttpURLWriterFactory;
 import com.codahale.metrics.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -1,4 +1,4 @@
-package com.acknsyn.urlwriter;
+package com.acknsyn.brandon.urlwriter;
 
 import java.io.IOException;
 import java.io.Writer;

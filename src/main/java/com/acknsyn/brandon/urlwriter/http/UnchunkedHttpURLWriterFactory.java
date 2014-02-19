@@ -1,6 +1,6 @@
-package com.acknsyn.urlwriter.http;
+package com.acknsyn.brandon.urlwriter.http;
 
-import com.acknsyn.urlwriter.URLWriterFactory;
+import com.acknsyn.brandon.urlwriter.URLWriterFactory;
 
 import java.io.IOException;
 import java.io.Writer;
