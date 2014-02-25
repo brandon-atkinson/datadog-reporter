@@ -5,11 +5,8 @@ import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.net.HttpURLConnection;
-import java.net.URL;
+import com.acknsyn.brandon.urlwriter.URL;
 
-/**
- *
- */
 public class UnchunkedHttpURLWriter extends Writer {
     private static final Logger log = LoggerFactory.getLogger(UnchunkedHttpURLWriter.class);
 
@@ -67,14 +64,13 @@ public class UnchunkedHttpURLWriter extends Writer {
             log.debug("made http request {}", request);
 
             int responseCode = connection.getResponseCode();
-            log.debug("http response code: {}", responseCode);
+
             if (responseCode >= 300 || responseCode < 200) {
-                log.error("http flush failed");
-                logError();
+                throw new HttpException(responseCode, getResponse());
             }
 
-        } catch (Exception e) {
-            log.error("couldn't flush http writer", e);
+        } catch (HttpException hwe) {
+            throw hwe;
         } finally {
             flushed = true;
 
@@ -99,7 +95,9 @@ public class UnchunkedHttpURLWriter extends Writer {
         }
     }
 
-    private void logError() throws IOException {
+    private String getResponse() throws HttpException {
+        String response = null;
+
         BufferedReader reader = null;
 
         try {
@@ -114,7 +112,7 @@ public class UnchunkedHttpURLWriter extends Writer {
                     sb.append(line);
                 }
 
-                log.error(sb.toString());
+                response = sb.toString();
             }
         } catch (Exception e) {
             log.error("couldn't read error stream", e);
@@ -127,5 +125,7 @@ public class UnchunkedHttpURLWriter extends Writer {
                 }
             }
         }
+
+        return response;
     }
 }

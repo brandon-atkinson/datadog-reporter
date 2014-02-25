@@ -1,6 +1,8 @@
 package com.acknsyn.brandon.datadog.reporter;
 
+import com.acknsyn.brandon.urlwriter.URL;
 import com.acknsyn.brandon.urlwriter.URLWriterFactory;
+import com.acknsyn.brandon.urlwriter.http.HttpException;
 import com.acknsyn.brandon.urlwriter.http.UnchunkedHttpURLWriterFactory;
 import com.codahale.metrics.*;
 import org.slf4j.Logger;
@@ -8,7 +10,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.Writer;
-import java.net.URL;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.concurrent.TimeUnit;
@@ -173,6 +174,8 @@ public class DatadogReporter extends ScheduledReporter {
             }
 
             series.close();
+        } catch (HttpException hre) {
+            log.error("datadog rejected request with status: {} and response: {}", hre.getStatus(), hre.getResponse());
         } catch (Exception e) {
             log.error("unable to report metrics to datadog", e);
         } finally {
@@ -191,8 +194,10 @@ public class DatadogReporter extends ScheduledReporter {
                 urlWriter = urlWriterFactory.getWriter(new URL(String.format(EVENTS_URL_TEMPLATE, apiKey)));
 
                 urlWriter.write(event.toString());
+            } catch (HttpException hre) {
+                log.error("datadog rejected request with status: {} and response: {}", hre.getStatus(), hre.getResponse());
             } catch (Exception e) {
-                log.error("unable to report event to datadog, e");
+                log.error("unable to report event to datadog", e);
             } finally {
                 if (urlWriter != null) {
                     try {
