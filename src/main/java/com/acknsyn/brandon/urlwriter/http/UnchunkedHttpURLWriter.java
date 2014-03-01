@@ -1,11 +1,14 @@
 package com.acknsyn.brandon.urlwriter.http;
 
+import com.acknsyn.brandon.urlwriter.io.InputReaderFactory;
+import com.acknsyn.brandon.urlwriter.io.OutputWriterFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.net.HttpURLConnection;
-import com.acknsyn.brandon.urlwriter.URL;
+import java.net.URL;
+import java.nio.charset.Charset;
 
 public class UnchunkedHttpURLWriter extends Writer {
     private static final Logger log = LoggerFactory.getLogger(UnchunkedHttpURLWriter.class);
@@ -20,12 +23,18 @@ public class UnchunkedHttpURLWriter extends Writer {
     private static final String HTTP_CHARSET = "UTF-8";
 
     private HttpURLConnection connection;
-    private StringBuilder request;
+    private OutputWriterFactory writerFactory;
+    private InputReaderFactory readerFactory;
+
+    private ByteArrayOutputStream request;
     private boolean flushed = false;
     private boolean closed = false;
 
-    public UnchunkedHttpURLWriter(URL url) throws IOException {
+    public UnchunkedHttpURLWriter(URL url, OutputWriterFactory writerFactory, InputReaderFactory readerFactory) throws IOException {
         connection = (HttpURLConnection) url.openConnection();
+        this.writerFactory = writerFactory;
+        this.readerFactory = readerFactory;
+
         connection.setConnectTimeout(HTTP_CONNECT_TIMEOUT_MILLIS);
         connection.setReadTimeout(HTTP_READ_TIMEOUT_MILLIS);
         connection.setDoOutput(true);
@@ -33,7 +42,7 @@ public class UnchunkedHttpURLWriter extends Writer {
         connection.setRequestProperty(HTTP_CONTENT_TYPE_KEY, HTTP_CONTENT_TYPE_VALUE);
         connection.setRequestProperty(HTTP_ACCEPT_KEY, HTTP_ACCEPT_VALUE);
         connection.setUseCaches(false);
-        request = new StringBuilder();
+        request = new ByteArrayOutputStream();
     }
 
     @Override
@@ -42,7 +51,7 @@ public class UnchunkedHttpURLWriter extends Writer {
         if (flushed) throw new IOException("write failed: write disallowed after first flush");
 
         for (int i = off; i < off + len; i++) {
-            request.append(cbuf[i]);
+            request.write(cbuf[i]);
         }
     }
 
@@ -52,12 +61,12 @@ public class UnchunkedHttpURLWriter extends Writer {
         if (flushed) throw new IOException("flush failed: only a single flush supported");
 
         //now that we know there's no more data, set content-length
-        connection.setFixedLengthStreamingMode(request.length());
+        connection.setFixedLengthStreamingMode(request.size());
 
         //write out the data
         Writer writer = null;
         try {
-            writer = new BufferedWriter(new OutputStreamWriter(connection.getOutputStream(), HTTP_CHARSET));
+            writer = writerFactory.getWriter(connection.getOutputStream(), Charset.forName(HTTP_CHARSET));
             writer.write(request.toString());
             writer.flush();
 
@@ -82,7 +91,6 @@ public class UnchunkedHttpURLWriter extends Writer {
                 }
             }
         }
-        request.setLength(0);
         connection.disconnect();
     }
 
@@ -98,18 +106,19 @@ public class UnchunkedHttpURLWriter extends Writer {
     private String getResponse() throws HttpException {
         String response = null;
 
-        BufferedReader reader = null;
+        Reader reader = null;
 
         try {
             InputStream errorStream = connection.getErrorStream();
+
             if (errorStream != null) {
-                reader = new BufferedReader(new InputStreamReader(errorStream));
+                reader = readerFactory.getReader(errorStream, Charset.forName(HTTP_CHARSET));
 
                 StringBuilder sb = new StringBuilder();
 
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    sb.append(line);
+                int character;
+                while ((character = reader.read()) > -1) {
+                    sb.append((char) character);
                 }
 
                 response = sb.toString();

@@ -1,21 +1,28 @@
 package com.acknsyn.brandon.urlwriter.http;
 
+import com.acknsyn.brandon.urlwriter.io.InputReaderFactory;
+import com.acknsyn.brandon.urlwriter.io.OutputWriterFactory;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
 import java.io.Writer;
-import com.acknsyn.brandon.urlwriter.URL;
+import java.net.URL;
 
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
 
 public class UnchunkedHttpURLWriterFactoryTest {
+    private OutputWriterFactory mockOutputWriterFactory;
+    private InputReaderFactory mockInputReaderFactory;
     private UnchunkedHttpURLWriterFactory factory;
 
     @Before
     public void setup() {
-        factory = new UnchunkedHttpURLWriterFactory();
+        mockOutputWriterFactory = mock(OutputWriterFactory.class);
+        mockInputReaderFactory = mock(InputReaderFactory.class);
+        factory = new UnchunkedHttpURLWriterFactory(mockOutputWriterFactory, mockInputReaderFactory);
     }
 
     @Test

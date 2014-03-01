@@ -1,15 +1,17 @@
 package com.acknsyn.brandon.datadog.reporter;
 
-import com.acknsyn.brandon.urlwriter.URL;
 import com.acknsyn.brandon.urlwriter.URLWriterFactory;
 import com.acknsyn.brandon.urlwriter.http.HttpException;
 import com.acknsyn.brandon.urlwriter.http.UnchunkedHttpURLWriterFactory;
+import com.acknsyn.brandon.urlwriter.io.BufferedReaderFactory;
+import com.acknsyn.brandon.urlwriter.io.BufferedWriterFactory;
 import com.codahale.metrics.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.net.URL;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.concurrent.TimeUnit;
@@ -32,6 +34,16 @@ public class DatadogReporter extends ScheduledReporter {
     private final String apiKey;
     private final URLWriterFactory urlWriterFactory;
 
+    private DatadogReporter(MetricRegistry metricRegistry, Clock clock, MetricFilter metricFilter, TimeUnit rateUnit,
+                            TimeUnit durationUnit, AliasStrategy aliasStrategy, TagStrategy tagStrategy,
+                            LifecycleEventStrategy lifecycleEventStrategy, String host, String apiKey) {
+        this(metricRegistry, clock, metricFilter, rateUnit,
+                durationUnit, aliasStrategy, tagStrategy,
+                lifecycleEventStrategy, host, apiKey,
+                new UnchunkedHttpURLWriterFactory(
+                        new BufferedWriterFactory(),
+                        new BufferedReaderFactory()));
+    }
 
     private DatadogReporter(MetricRegistry metricRegistry, Clock clock, MetricFilter metricFilter, TimeUnit rateUnit,
                             TimeUnit durationUnit, AliasStrategy aliasStrategy, TagStrategy tagStrategy,
@@ -60,7 +72,6 @@ public class DatadogReporter extends ScheduledReporter {
         private AliasStrategy aliasStrategy = AliasStrategy.NO_ALIASES;
         private TagStrategy tagStrategy = TagStrategy.NO_TAGS;
         private LifecycleEventStrategy lifecycleEventStrategy = LifecycleEventStrategy.NO_EVENTS;
-        private URLWriterFactory connectionFactory = new UnchunkedHttpURLWriterFactory();
 
         public Builder(MetricRegistry registry) {
             this.registry = registry;
@@ -101,14 +112,9 @@ public class DatadogReporter extends ScheduledReporter {
             return this;
         }
 
-        public Builder usingConnectionFactory(URLWriterFactory connectionFactory) {
-            this.connectionFactory = connectionFactory;
-            return this;
-        }
-
         public DatadogReporter build(String host, String apiKey) {
             return new DatadogReporter(registry, clock, filter, rateUnit, durationUnit, aliasStrategy, tagStrategy,
-                    lifecycleEventStrategy, host, apiKey, connectionFactory);
+                    lifecycleEventStrategy, host, apiKey);
         }
     }
 

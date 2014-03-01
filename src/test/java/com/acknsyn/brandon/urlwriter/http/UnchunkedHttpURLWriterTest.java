@@ -1,102 +1,129 @@
 package com.acknsyn.brandon.urlwriter.http;
 
+import com.acknsyn.brandon.urlwriter.io.InputReaderFactory;
+import com.acknsyn.brandon.urlwriter.io.OutputWriterFactory;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.stubbing.OngoingStubbing;
+import org.powermock.api.mockito.PowerMockito;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.junit4.PowerMockRunner;
 
 import java.io.*;
 import java.net.HttpURLConnection;
-import com.acknsyn.brandon.urlwriter.URL;
+import java.net.URL;
+import java.nio.charset.Charset;
 
 import static org.junit.Assert.*;
+import static org.mockito.Matchers.eq;
+import static org.mockito.Matchers.matches;
 import static org.mockito.Mockito.*;
+import static org.powermock.api.mockito.PowerMockito.mock;
+import static org.powermock.api.mockito.PowerMockito.verifyNoMoreInteractions;
+import static org.powermock.api.mockito.PowerMockito.when;
 
+
+@RunWith(PowerMockRunner.class)
+@PrepareForTest({UnchunkedHttpURLWriter.class})
 public class UnchunkedHttpURLWriterTest {
-    private URL url;
-    private HttpURLConnection httpURLConnection;
-    private OutputStream outputStream;
+    private URL mockUrl;
+    private HttpURLConnection mockHttpURLConnection;
+
+    private OutputWriterFactory mockOutputWriterFactory;
+    private Writer mockWriter;
+
+    private InputReaderFactory mockInputReaderFactory;
+    private Reader mockReader;
+
+    private InputStream mockInputStream;
 
     @Before
-    public void setup() {
-        url = mock(URL.class);
-        httpURLConnection = mock(HttpURLConnection.class);
-        outputStream = new ByteArrayOutputStream();
+    public void setup() throws IOException {
+        mockUrl = PowerMockito.mock(URL.class);
+        mockHttpURLConnection = PowerMockito.mock(HttpURLConnection.class);
+        when(mockUrl.openConnection()).thenReturn(mockHttpURLConnection);
+
+        mockOutputWriterFactory = mock(OutputWriterFactory.class);
+        mockWriter = mock(Writer.class);
+        when(mockOutputWriterFactory.getWriter(any(OutputStream.class), any(Charset.class))).thenReturn(mockWriter);
+
+        mockInputReaderFactory = mock(InputReaderFactory.class);
+        mockReader = mock(Reader.class);
+        when(mockInputReaderFactory.getReader(any(InputStream.class), any(Charset.class))).thenReturn(mockReader);
+        mockInputStream = mock(InputStream.class);
     }
 
     @Test
-    public void testConstruct_verifyOptions() throws IOException {
-        when(url.openConnection()).thenReturn(httpURLConnection);
+    public void testConstruct_verifyOptions() throws Exception {
+        UnchunkedHttpURLWriter httpURLWriter = new UnchunkedHttpURLWriter(mockUrl, mockOutputWriterFactory, mockInputReaderFactory);
 
-        UnchunkedHttpURLWriter writer = new UnchunkedHttpURLWriter(url);
-
-        verify(url, times(1)).openConnection();
-        verify(httpURLConnection, times(1)).setRequestMethod("POST");
-        verify(httpURLConnection, times(1)).setDoOutput(true);
-        verify(httpURLConnection, times(1)).setRequestProperty("Accept", "*/*");
-        verify(httpURLConnection, times(1)).setRequestProperty(eq("Content-Type"), matches("application/json;\\s*charset=utf-8"));
-        verify(httpURLConnection, times(1)).setUseCaches(false);
+//        verify(mockUrl).openConnection(); //cannot be verified; mockito limitation
+        verify(mockHttpURLConnection).setRequestMethod("POST");
+        verify(mockHttpURLConnection).setDoOutput(true);
+        verify(mockHttpURLConnection).setRequestProperty("Accept", "*/*");
+        verify(mockHttpURLConnection).setRequestProperty(eq("Content-Type"), matches("application/json;\\s*charset=utf-8"));
+        verify(mockHttpURLConnection).setUseCaches(false);
     }
 
     @Test
-    public void testFirstWriteFlushes() throws IOException {
+    public void testFirstFlushFlushes() throws IOException {
         String expected = "{\"message\":\"hello, world!\"}";
 
-        when(url.openConnection()).thenReturn(httpURLConnection);
-        when(httpURLConnection.getOutputStream()).thenReturn(outputStream);
-        when(httpURLConnection.getResponseCode()).thenReturn(200);
+        when(mockHttpURLConnection.getResponseCode()).thenReturn(200);
 
-        UnchunkedHttpURLWriter writer = new UnchunkedHttpURLWriter(url);
+        UnchunkedHttpURLWriter unchunkedHttpURLWriter = new UnchunkedHttpURLWriter(mockUrl, mockOutputWriterFactory, mockInputReaderFactory);
 
-        writer.write(expected);
+        unchunkedHttpURLWriter.write(expected);
+        verifyNoMoreInteractions(mockWriter);
 
-        assertEquals("", outputStream.toString());
-
-        writer.flush();
-
-        assertEquals(expected, outputStream.toString());
-
-        verify(httpURLConnection, times(1)).getOutputStream();
-        verify(httpURLConnection, times(1)).getResponseCode();
-        verify(httpURLConnection, times(1)).disconnect();
+        unchunkedHttpURLWriter.flush();
+        verify(mockWriter).write(expected);
+        verify(mockWriter).flush();
+        verify(mockHttpURLConnection).disconnect();
     }
 
     @Test
     public void testFirstCloseFlushes() throws IOException {
         String expected = "{\"message\":\"first close flushes\"}";
 
-        when(url.openConnection()).thenReturn(httpURLConnection);
-        when(httpURLConnection.getOutputStream()).thenReturn(outputStream);
-        when(httpURLConnection.getResponseCode()).thenReturn(200);
+        when(mockUrl.openConnection()).thenReturn(mockHttpURLConnection);
+        when(mockHttpURLConnection.getResponseCode()).thenReturn(200);
 
 
-        UnchunkedHttpURLWriter writer = new UnchunkedHttpURLWriter(url);
+        UnchunkedHttpURLWriter writer = new UnchunkedHttpURLWriter(mockUrl, mockOutputWriterFactory, mockInputReaderFactory);
 
         writer.write(expected);
-
-        assertEquals("", outputStream.toString());
+        verifyNoMoreInteractions(mockWriter);
 
         writer.close();
+        verify(mockWriter).write(expected);
+        verify(mockWriter).flush();
+        verify(mockHttpURLConnection).disconnect();
+    }
 
-        assertEquals(expected, outputStream.toString());
-
-        verify(httpURLConnection, times(1)).getOutputStream();
-        verify(httpURLConnection, times(1)).getResponseCode();
-        verify(httpURLConnection, times(1)).disconnect();
+    private void setErrorResponse(String errorResponse) throws IOException {
+        char[] errorResponseChars = errorResponse.toCharArray();
+        OngoingStubbing stub = when(mockReader.read());
+        for (int i = 0; i < errorResponseChars.length; i++) {
+            stub = stub.thenReturn((int) errorResponseChars[i]);
+        }
+        stub.thenReturn(-1);
     }
 
     @Test
     public void testThrowsHttpException_100() throws IOException {
         int expectedStatus = 100;
-        String expectedResponse = "{\"message\":\"first close flushes\"}";
-        InputStream errorStream = new ByteArrayInputStream(expectedResponse.getBytes());
+        String expectedResponse = "continue";
 
-        when(url.openConnection()).thenReturn(httpURLConnection);
-        when(httpURLConnection.getOutputStream()).thenReturn(outputStream);
-        when(httpURLConnection.getResponseCode()).thenReturn(expectedStatus);
-        when(httpURLConnection.getErrorStream()).thenReturn(errorStream);
+        when(mockUrl.openConnection()).thenReturn(mockHttpURLConnection);
+        when(mockHttpURLConnection.getResponseCode()).thenReturn(expectedStatus);
+        when(mockHttpURLConnection.getErrorStream()).thenReturn(mockInputStream);
+        setErrorResponse(expectedResponse);
 
         HttpException exception = null;
 
-        UnchunkedHttpURLWriter writer = new UnchunkedHttpURLWriter(url);
+        UnchunkedHttpURLWriter writer = new UnchunkedHttpURLWriter(mockUrl, mockOutputWriterFactory, mockInputReaderFactory);
         try {
             writer.write("boo");
             writer.close();
@@ -112,17 +139,16 @@ public class UnchunkedHttpURLWriterTest {
     @Test
     public void testThrowsHttpException_304() throws IOException {
         int expectedStatus = 304;
-        String expectedResponse = "{\"message\":\"first close flushes\"}";
-        InputStream errorStream = new ByteArrayInputStream(expectedResponse.getBytes());
+        String expectedResponse = "temporarily moved";
 
-        when(url.openConnection()).thenReturn(httpURLConnection);
-        when(httpURLConnection.getOutputStream()).thenReturn(outputStream);
-        when(httpURLConnection.getResponseCode()).thenReturn(expectedStatus);
-        when(httpURLConnection.getErrorStream()).thenReturn(errorStream);
+        when(mockUrl.openConnection()).thenReturn(mockHttpURLConnection);
+        when(mockHttpURLConnection.getResponseCode()).thenReturn(expectedStatus);
+        when(mockHttpURLConnection.getErrorStream()).thenReturn(mockInputStream);
+        setErrorResponse(expectedResponse);
 
         HttpException exception = null;
 
-        UnchunkedHttpURLWriter writer = new UnchunkedHttpURLWriter(url);
+        UnchunkedHttpURLWriter writer = new UnchunkedHttpURLWriter(mockUrl, mockOutputWriterFactory, mockInputReaderFactory);
         try {
             writer.write("boo");
             writer.close();
@@ -138,17 +164,16 @@ public class UnchunkedHttpURLWriterTest {
     @Test
     public void testThrowsHttpException_400() throws IOException {
         int expectedStatus = 400;
-        String expectedResponse = "{\"message\":\"first close flushes\"}";
-        InputStream errorStream = new ByteArrayInputStream(expectedResponse.getBytes());
+        String expectedResponse = "not found";
 
-        when(url.openConnection()).thenReturn(httpURLConnection);
-        when(httpURLConnection.getOutputStream()).thenReturn(outputStream);
-        when(httpURLConnection.getResponseCode()).thenReturn(expectedStatus);
-        when(httpURLConnection.getErrorStream()).thenReturn(errorStream);
+        when(mockUrl.openConnection()).thenReturn(mockHttpURLConnection);
+        when(mockHttpURLConnection.getResponseCode()).thenReturn(expectedStatus);
+        when(mockHttpURLConnection.getErrorStream()).thenReturn(mockInputStream);
+        setErrorResponse(expectedResponse);
 
         HttpException exception = null;
 
-        UnchunkedHttpURLWriter writer = new UnchunkedHttpURLWriter(url);
+        UnchunkedHttpURLWriter writer = new UnchunkedHttpURLWriter(mockUrl, mockOutputWriterFactory, mockInputReaderFactory);
         try {
             writer.write("boo");
             writer.close();
@@ -164,17 +189,16 @@ public class UnchunkedHttpURLWriterTest {
     @Test
     public void testThrowsHttpException_500() throws IOException {
         int expectedStatus = 500;
-        String expectedResponse = "{\"message\":\"first close flushes\"}";
-        InputStream errorStream = new ByteArrayInputStream(expectedResponse.getBytes());
+        String expectedResponse = "server error";
 
-        when(url.openConnection()).thenReturn(httpURLConnection);
-        when(httpURLConnection.getOutputStream()).thenReturn(outputStream);
-        when(httpURLConnection.getResponseCode()).thenReturn(expectedStatus);
-        when(httpURLConnection.getErrorStream()).thenReturn(errorStream);
+        when(mockUrl.openConnection()).thenReturn(mockHttpURLConnection);
+        when(mockHttpURLConnection.getResponseCode()).thenReturn(expectedStatus);
+        when(mockHttpURLConnection.getErrorStream()).thenReturn(mockInputStream);
+        setErrorResponse(expectedResponse);
 
         HttpException exception = null;
 
-        UnchunkedHttpURLWriter writer = new UnchunkedHttpURLWriter(url);
+        UnchunkedHttpURLWriter writer = new UnchunkedHttpURLWriter(mockUrl, mockOutputWriterFactory, mockInputReaderFactory);
         try {
             writer.write("boo");
             writer.close();
@@ -191,13 +215,12 @@ public class UnchunkedHttpURLWriterTest {
     public void testThrowsHttpException_200() throws IOException {
         int expectedStatus = 200;
 
-        when(url.openConnection()).thenReturn(httpURLConnection);
-        when(httpURLConnection.getOutputStream()).thenReturn(outputStream);
-        when(httpURLConnection.getResponseCode()).thenReturn(expectedStatus);
+        when(mockUrl.openConnection()).thenReturn(mockHttpURLConnection);
+        when(mockHttpURLConnection.getResponseCode()).thenReturn(expectedStatus);
 
         HttpException exception = null;
 
-        UnchunkedHttpURLWriter writer = new UnchunkedHttpURLWriter(url);
+        UnchunkedHttpURLWriter writer = new UnchunkedHttpURLWriter(mockUrl, mockOutputWriterFactory, mockInputReaderFactory);
         try {
             writer.write("boo");
             writer.close();
@@ -207,19 +230,18 @@ public class UnchunkedHttpURLWriterTest {
 
         assertNull("should not throw HttpException", exception);
 
-        verify(httpURLConnection, never()).getErrorStream();
+        verify(mockHttpURLConnection, never()).getErrorStream();
     }
 
     @Test
     public void testWriteAfterFlush() throws IOException {
-        int expectedStatus= 200;
-        when(url.openConnection()).thenReturn(httpURLConnection);
-        when(httpURLConnection.getOutputStream()).thenReturn(outputStream);
-        when(httpURLConnection.getResponseCode()).thenReturn(expectedStatus);
+        int expectedStatus = 200;
+        when(mockUrl.openConnection()).thenReturn(mockHttpURLConnection);
+        when(mockHttpURLConnection.getResponseCode()).thenReturn(expectedStatus);
 
         IOException exception = null;
 
-        UnchunkedHttpURLWriter writer = new UnchunkedHttpURLWriter(url);
+        UnchunkedHttpURLWriter writer = new UnchunkedHttpURLWriter(mockUrl, mockOutputWriterFactory, mockInputReaderFactory);
         try {
             writer.write("boo");
             writer.flush();
@@ -240,14 +262,13 @@ public class UnchunkedHttpURLWriterTest {
 
     @Test
     public void testWriteAfterClose() throws IOException {
-        int expectedStatus= 200;
-        when(url.openConnection()).thenReturn(httpURLConnection);
-        when(httpURLConnection.getOutputStream()).thenReturn(outputStream);
-        when(httpURLConnection.getResponseCode()).thenReturn(expectedStatus);
+        int expectedStatus = 200;
+        when(mockUrl.openConnection()).thenReturn(mockHttpURLConnection);
+        when(mockHttpURLConnection.getResponseCode()).thenReturn(expectedStatus);
 
         IOException exception = null;
 
-        UnchunkedHttpURLWriter writer = new UnchunkedHttpURLWriter(url);
+        UnchunkedHttpURLWriter writer = new UnchunkedHttpURLWriter(mockUrl, mockOutputWriterFactory, mockInputReaderFactory);
         try {
             writer.write("boo");
             writer.close();
@@ -268,14 +289,13 @@ public class UnchunkedHttpURLWriterTest {
 
     @Test
     public void testFlushAfterFlush() throws IOException {
-        int expectedStatus= 200;
-        when(url.openConnection()).thenReturn(httpURLConnection);
-        when(httpURLConnection.getOutputStream()).thenReturn(outputStream);
-        when(httpURLConnection.getResponseCode()).thenReturn(expectedStatus);
+        int expectedStatus = 200;
+        when(mockUrl.openConnection()).thenReturn(mockHttpURLConnection);
+        when(mockHttpURLConnection.getResponseCode()).thenReturn(expectedStatus);
 
         IOException exception = null;
 
-        UnchunkedHttpURLWriter writer = new UnchunkedHttpURLWriter(url);
+        UnchunkedHttpURLWriter writer = new UnchunkedHttpURLWriter(mockUrl, mockOutputWriterFactory, mockInputReaderFactory);
         try {
             writer.write("boo");
             writer.flush();
@@ -297,14 +317,13 @@ public class UnchunkedHttpURLWriterTest {
 
     @Test
     public void testFlushAfterClose() throws IOException {
-        int expectedStatus= 200;
-        when(url.openConnection()).thenReturn(httpURLConnection);
-        when(httpURLConnection.getOutputStream()).thenReturn(outputStream);
-        when(httpURLConnection.getResponseCode()).thenReturn(expectedStatus);
+        int expectedStatus = 200;
+        when(mockUrl.openConnection()).thenReturn(mockHttpURLConnection);
+        when(mockHttpURLConnection.getResponseCode()).thenReturn(expectedStatus);
 
         IOException exception = null;
 
-        UnchunkedHttpURLWriter writer = new UnchunkedHttpURLWriter(url);
+        UnchunkedHttpURLWriter writer = new UnchunkedHttpURLWriter(mockUrl, mockOutputWriterFactory, mockInputReaderFactory);
         try {
             writer.write("boo");
             writer.close();
@@ -326,14 +345,13 @@ public class UnchunkedHttpURLWriterTest {
 
     @Test
     public void testCloseAfterClose() throws IOException {
-        int expectedStatus= 200;
-        when(url.openConnection()).thenReturn(httpURLConnection);
-        when(httpURLConnection.getOutputStream()).thenReturn(outputStream);
-        when(httpURLConnection.getResponseCode()).thenReturn(expectedStatus);
+        int expectedStatus = 200;
+        when(mockUrl.openConnection()).thenReturn(mockHttpURLConnection);
+        when(mockHttpURLConnection.getResponseCode()).thenReturn(expectedStatus);
 
         IOException exception = null;
 
-        UnchunkedHttpURLWriter writer = new UnchunkedHttpURLWriter(url);
+        UnchunkedHttpURLWriter writer = new UnchunkedHttpURLWriter(mockUrl, mockOutputWriterFactory, mockInputReaderFactory);
         try {
             writer.write("boo");
             writer.close();
