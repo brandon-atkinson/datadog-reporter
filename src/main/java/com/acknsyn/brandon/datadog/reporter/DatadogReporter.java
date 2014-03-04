@@ -216,10 +216,12 @@ public class DatadogReporter extends ScheduledReporter {
         }
     }
 
+    //TODO: escape required json unicode characters where appropriate
     private String alias(String name, Metric metric) {
         return aliasStrategy.alias(name, metric);
     }
 
+    //TODO: escape required json unicode characters where appropriate
     private String[] tags(String name, Metric metric) {
         return tagStrategy.tags(name, metric);
     }

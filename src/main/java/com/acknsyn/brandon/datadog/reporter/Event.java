@@ -13,6 +13,7 @@ public class Event {
         json = generateJson(title, text, timestamp, priority, tags, alertType, aggregationKey, sourceType);
     }
 
+    //TODO: escape required json unicode characters where appropriate
     private String generateJson(String title, String text, Long timestamp, Priority priority, String[] tags,
                              AlertType alertType, String aggregationKey, SourceType sourceType) {
         if (title == null) {
