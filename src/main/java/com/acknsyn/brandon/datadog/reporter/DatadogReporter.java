@@ -70,8 +70,8 @@ public class DatadogReporter extends ScheduledReporter {
         private TimeUnit rateUnit = TimeUnit.SECONDS;
         private TimeUnit durationUnit = TimeUnit.MILLISECONDS;
         private AliasStrategy aliasStrategy = AliasStrategy.NO_ALIASES;
-        private TagStrategy tagStrategy = TagStrategy.NO_TAGS;
-        private LifecycleEventStrategy lifecycleEventStrategy = LifecycleEventStrategy.NO_EVENTS;
+        private TagStrategy tagStrategy = new EmptyTagStrategy();
+        private LifecycleEventStrategy lifecycleEventStrategy = new NullLifecyleEventStrategy();
 
         public Builder(MetricRegistry registry) {
             this.registry = registry;
