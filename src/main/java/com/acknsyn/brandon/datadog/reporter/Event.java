@@ -15,6 +15,14 @@ public class Event {
 
     private String generateJson(String title, String text, Long timestamp, Priority priority, String[] tags,
                              AlertType alertType, String aggregationKey, SourceType sourceType) {
+        if (title == null) {
+            throw new NullPointerException("title must not be null");
+        }
+
+        if (text == null) {
+            throw new NullPointerException("text must not be null");
+        }
+
         if (aggregationKey != null && aggregationKey.length() > 100) {
             throw new IllegalArgumentException("aggregationKey cannot exceed 100 characters");
         }
@@ -24,21 +32,24 @@ public class Event {
         sb.append('{');
 
         sb.append("\"title\":\"").append(title).append('"');
+
         sb.append(",\"text\":\"").append(text).append('"');
 
         if (timestamp != null) {
-            sb.append(",\"timestamp\":").append(timestamp.toString()).append('"');
+            sb.append(",\"timestamp\":\"").append(timestamp.toString()).append('"');
         }
 
         if (priority != null) {
-            sb.append(",\"timestamp\":").append(priority.toString()).append('"');
+            sb.append(",\"priority\":\"").append(priority.toString()).append('"');
         }
 
         if (tags != null && tags.length > 0) {
-            sb.append(",\"tags\":");
+            sb.append(",\"tags\":[");
             for (int i = 0; i < tags.length; i++) {
+                if (i > 0) sb.append(',');
                 sb.append('"').append(tags[i]).append('"');
             }
+            sb.append(']');
         }
 
         if (alertType != null) {
