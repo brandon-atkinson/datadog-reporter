@@ -69,7 +69,7 @@ public class DatadogReporter extends ScheduledReporter {
         private MetricFilter filter = MetricFilter.ALL;
         private TimeUnit rateUnit = TimeUnit.SECONDS;
         private TimeUnit durationUnit = TimeUnit.MILLISECONDS;
-        private AliasStrategy aliasStrategy = AliasStrategy.NO_ALIASES;
+        private AliasStrategy aliasStrategy = new NoChangeAliasStrategy();
         private TagStrategy tagStrategy = new EmptyTagStrategy();
         private LifecycleEventStrategy lifecycleEventStrategy = new NullLifecyleEventStrategy();
 
